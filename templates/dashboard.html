@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroFit Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{{ url_for('dashboard') }}">
+                                <i class="bi bi-house-door"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('health_data') }}">
+                                <i class="bi bi-heart-pulse"></i> Health Data
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('meditation') }}">
+                                <i class="bi bi-activity"></i> Meditation
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1>Dashboard</h1>
+                    <div class="d-flex align-items-center">
+                        <!-- Profile Section -->
+                        <div class="dropdown me-3">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle"></i>
+                                {{ user.username }}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                                <li><span class="dropdown-item-text"><strong>Email:</strong> {{ user.email }}</span></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                            </ul>
+                        </div>
+                        <div class="btn-toolbar mb-2 mb-md-0">
+                            <button id="connectBLE" class="btn btn-primary">
+                                <i class="bi bi-bluetooth"></i> Connect Device
+                            </button>
+                            <button id="emergencyBtn" class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#emergencyModal">
+                                <i class="bi bi-exclamation-triangle"></i> Emergency Alert
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emergency Modal -->
+                <div class="modal fade" id="emergencyModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Emergency Contact</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="emergencyForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Contact Email</label>
+                                        <input type="email" class="form-control" id="emergencyEmail" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Message</label>
+                                        <textarea class="form-control" id="emergencyMessage" rows="2">Emergency! Please help me.</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Your Location</label>
+                                        <input type="text" class="form-control" id="locationField" readonly>
+                                    </div>
+                                    <button type="submit" class="btn btn-danger w-100">Send Alert</button>
+                                </form>
+                                <div id="emergencyStatus" class="mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Health metrics cards -->
+                <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-heart-pulse-fill"></i> Heart Rate</h5>
+                                <h2 id="heartRate">-- BPM</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-lungs"></i> SpO2</h5>
+                                <h2 id="spo2">--%</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-emoji-smile"></i> Mood Score</h5>
+                                <h2 id="moodScore">--/100</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="row">
+                    <div class="col-12 col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Brain Wave Activity</h5>
+                                <canvas id="brainwaveChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Heart Rate Trend</h5>
+                                <canvas id="heartRateChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/bluetooth.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/location.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script>
+    // Emergency contact logic with location access
+    document.addEventListener('DOMContentLoaded', function() {
+        const locationField = document.getElementById('locationField');
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                locationField.value = pos.coords.latitude + ', ' + pos.coords.longitude;
+            }, function() {
+                locationField.value = 'Location access denied';
+            });
+        } else {
+            locationField.value = 'Geolocation not supported';
+        }
+
+        document.getElementById('emergencyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('emergencyEmail').value;
+            const message = document.getElementById('emergencyMessage').value;
+            const location = document.getElementById('locationField').value;
+            fetch('/api/emergency-alert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, message, location })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('emergencyStatus').textContent = data.status;
+            })
+            .catch(() => {
+                document.getElementById('emergencyStatus').textContent = 'Failed to send alert.';
+            });
+        });
+
+        // Bluetooth connect logic
+        const connectBtn = document.getElementById('connectBLE');
+        if (connectBtn && navigator.bluetooth) {
+            connectBtn.addEventListener('click', async function() {
+                try {
+                    const device = await navigator.bluetooth.requestDevice({
+                        filters: [{ services: ['heart_rate'] }],
+                        optionalServices: ['battery_service', 'device_information']
+                    });
+                    const server = await device.gatt.connect();
+                    const service = await server.getPrimaryService('heart_rate');
+                    const characteristic = await service.getCharacteristic('heart_rate_measurement');
+                    await characteristic.startNotifications();
+                    characteristic.addEventListener('characteristicvaluechanged', function(event) {
+                        const value = event.target.value;
+                        const heartRate = value.getUint8(1);
+                        document.getElementById('heartRate').textContent = heartRate + ' BPM';
+                        // Extend here for SpO2, mood, etc.
+                    });
+                    alert('Device connected: ' + device.name);
+                } catch (error) {
+                    alert('Bluetooth connection failed: ' + error);
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html>
