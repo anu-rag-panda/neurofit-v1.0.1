@@ -134,16 +134,27 @@ def emergency_alert():
     email = data.get('email')
     message = data.get('message')
     location = data.get('location')
-    # Compose email
     subject = "NeuroFit Emergency Alert"
     body = f"{message}\nLocation: {location}\nUser: {current_user.username} ({current_user.email})"
+
+    # Replace with your Apps Script web app URL
+    APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycby1GQmKAt410LKFz3kDWmNAQT6OQkTXU3zfn3EZvHDRZObAfgLfyh1M6eQbelskakCE/exec"
+
+    payload = {
+        "email": email,
+        "subject": subject,
+        "body": body
+    }
+
+    import requests
     try:
-        msg = Message(subject, sender=app.config['MAIL_USERNAME'], recipients=[email])
-        msg.body = body
-        mail.send(msg)
-        status = "Emergency alert sent via email!"
+        resp = requests.post(APPSCRIPT_URL, json=payload)
+        if resp.status_code == 200:
+            status = "Emergency alert sent via Google Apps Script!"
+        else:
+            status = "Failed to send email via Apps Script."
     except Exception as e:
-        print("Email send error:", e)
+        print("Apps Script send error:", e)
         status = "Failed to send email."
     return jsonify({"status": status})
 
