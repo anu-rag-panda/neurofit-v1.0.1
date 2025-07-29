@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_mail import Mail, Message
 from datetime import datetime
+import requests
+import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -132,31 +134,62 @@ def reset_db():
 def emergency_alert():
     data = request.json
     email = data.get('email')
+    phone = data.get('phone')  # Expect phone number in request
     message = data.get('message')
     location = data.get('location')
     subject = "NeuroFit Emergency Alert"
     body = f"{message}\nLocation: {location}\nUser: {current_user.username} ({current_user.email})"
+    status_msgs = []  # <-- Always define at the top
 
-    # Replace with your Apps Script web app URL
-    APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycby1GQmKAt410LKFz3kDWmNAQT6OQkTXU3zfn3EZvHDRZObAfgLfyh1M6eQbelskakCE/exec"
+    # Send Email via Google Apps Script
+    if email:
+        APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycby1GQmKAt410LKFz3kDWmNAQT6OQkTXU3zfn3EZvHDRZObAfgLfyh1M6eQbelskakCE/exec"
+        payload = {
+            "email": email,
+            "subject": subject,
+            "body": body
+        }
+        try:
+            resp = requests.post(APPSCRIPT_URL, json=payload)
+            if resp.status_code == 200:
+                status_msgs.append("Emergency alert sent via email!")
+            else:
+                status_msgs.append("Failed to send email via Apps Script.")
+        except Exception as e:
+            print("Apps Script send error:", e)
+            status_msgs.append("Failed to send email.")
 
-    payload = {
-        "email": email,
-        "subject": subject,
-        "body": body
-    }
+    # Send SMS via TextBee
+    if phone:
+        BASE_URL = 'https://api.textbee.dev/api/v1'
+        API_KEY = '7cc4536a-bf0d-4d83-a43a-ccecb7a23452'  # Replace with your actual API key
+        DEVICE_ID = '6888f7896cd203ecb56f05ec'  # Replace with your actual device ID
 
-    import requests
-    try:
-        resp = requests.post(APPSCRIPT_URL, json=payload)
-        if resp.status_code == 200:
-            status = "Emergency alert sent via Google Apps Script!"
-        else:
-            status = "Failed to send email via Apps Script."
-    except Exception as e:
-        print("Apps Script send error:", e)
-        status = "Failed to send email."
-    return jsonify({"status": status})
+        url = f"{BASE_URL}/gateway/devices/{DEVICE_ID}/send-sms"
+        headers = {
+            'x-api-key': API_KEY,
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            'recipients': [phone],
+            'message': f"NeuroFit Emergency Alert: {message}\nLocation: {location}, current user: {current_user.username} ({current_user.email})"
+        }
+        try:
+            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            response.raise_for_status()  # Raise an exception for HTTP errors (4xx or 5xx)
+            status_msgs.append("SMS Sent Successfully!")
+        except requests.exceptions.HTTPError as err:
+            print(f"HTTP error occurred: {err}")
+            print(f"Response content: {response.text}")
+            status_msgs.append("Failed to send SMS (HTTP error).")
+        except requests.exceptions.ConnectionError as err:
+            print(f"Connection error occurred: {err}")
+            status_msgs.append("Failed to send SMS (connection error).")
+        except Exception as err:
+            print(f"An unexpected error occurred: {err}")
+            status_msgs.append("Failed to send SMS (unexpected error).")
+
+    return jsonify({"status": " ".join(status_msgs)})
 
 @login_manager.unauthorized_handler
 def unauthorized():
@@ -165,4 +198,5 @@ def unauthorized():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+    app.run(debug=True)
     app.run(debug=True)

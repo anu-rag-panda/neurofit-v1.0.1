@@ -73,8 +73,20 @@
                             <div class="modal-body">
                                 <form id="emergencyForm">
                                     <div class="mb-3">
+                                        <label class="form-label">Send Alert Via</label>
+                                        <select class="form-select" id="alertMethod" required>
+                                            <option value="email" selected>Email</option>
+                                            <option value="sms">SMS</option>
+                                            <option value="both">Both</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="emailField">
                                         <label class="form-label">Contact Email</label>
-                                        <input type="email" class="form-control" id="emergencyEmail" required>
+                                        <input type="email" class="form-control" id="emergencyEmail">
+                                    </div>
+                                    <div class="mb-3 d-none" id="phoneField">
+                                        <label class="form-label">Contact Phone (SMS)</label>
+                                        <input type="tel" class="form-control" id="emergencyPhone" pattern="^\+?\d{10,15}$" placeholder="+1234567890">
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">Message</label>
@@ -162,15 +174,46 @@
             locationField.value = 'Geolocation not supported';
         }
 
+        // Show/hide email/phone fields based on alert method
+        const alertMethod = document.getElementById('alertMethod');
+        const emailField = document.getElementById('emailField');
+        const phoneField = document.getElementById('phoneField');
+        alertMethod.addEventListener('change', function() {
+            if (this.value === 'email') {
+                emailField.classList.remove('d-none');
+                phoneField.classList.add('d-none');
+                document.getElementById('emergencyEmail').required = true;
+                document.getElementById('emergencyPhone').required = false;
+            } else if (this.value === 'sms') {
+                emailField.classList.add('d-none');
+                phoneField.classList.remove('d-none');
+                document.getElementById('emergencyEmail').required = false;
+                document.getElementById('emergencyPhone').required = true;
+            } else {
+                emailField.classList.remove('d-none');
+                phoneField.classList.remove('d-none');
+                document.getElementById('emergencyEmail').required = true;
+                document.getElementById('emergencyPhone').required = true;
+            }
+        });
+
         document.getElementById('emergencyForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            const method = alertMethod.value;
             const email = document.getElementById('emergencyEmail').value;
+            const phone = document.getElementById('emergencyPhone').value;
             const message = document.getElementById('emergencyMessage').value;
             const location = document.getElementById('locationField').value;
             fetch('/api/emergency-alert', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, message, location })
+                body: JSON.stringify({
+                    method,
+                    email,
+                    phone,
+                    message,
+                    location
+                })
             })
             .then(res => res.json())
             .then(data => {
